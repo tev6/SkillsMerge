@@ -1,0 +1,22 @@
+{
+  "name": "skill-c",
+  "description": "A JSON skill for code review",
+  "instructions": [
+    {
+      "command": "Always",
+      "content": "Always add unit tests for new functions",
+      "category": "Testing",
+      "priority": 15
+    },
+    {
+      "command": "Use",
+      "content": "Use descriptive variable names",
+      "category": "Style",
+      "priority": 5
+    }
+  ],
+  "config": {
+    "version": "1.0",
+    "priority": 5
+  }
+}

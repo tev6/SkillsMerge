@@ -1,0 +1,14 @@
+name: skill-d
+description: A YAML skill for documentation
+instructions:
+  - command: Document
+    content: Document all public APIs
+    category: Documentation
+    priority: 10
+  - command: Keep
+    content: Keep README up to date
+    category: Documentation
+    priority: 8
+config:
+  version: "1.0"
+  priority: 15

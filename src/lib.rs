@@ -1,0 +1,12 @@
+pub mod ai;
+pub mod cli;
+pub mod config;
+pub mod conflict;
+pub mod error;
+pub mod io;
+pub mod ir;
+pub mod merger;
+pub mod output;
+pub mod parser;
+pub mod reporter;
+pub mod tui;

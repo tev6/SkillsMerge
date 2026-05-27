@@ -1,0 +1,18 @@
+name = "skill-e"
+description = "A TOML skill for security"
+
+[[instructions]]
+command = "Never"
+content = "Never commit secrets to version control"
+category = "Security"
+priority = 20
+
+[[instructions]]
+command = "Always"
+content = "Always validate user input"
+category = "Security"
+priority = 18
+
+[config]
+version = "1.0"
+priority = 25
