@@ -1,12 +1,12 @@
 [package]
 name = "skillsmerge"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "A priority compiler for merging AI SKILLS files — resolve conflicts across multi-format skill definitions with AI-assisted semantic understanding"
 license = "MIT"
-repository = "https://github.com/AtomGinger/SkillsMerge"
-homepage = "https://github.com/AtomGinger/SkillsMerge"
-documentation = "https://github.com/AtomGinger/SkillsMerge"
+repository = "https://github.com/tev6/SkillsMerge"
+homepage = "https://github.com/tev6/SkillsMerge"
+documentation = "https://github.com/tev6/SkillsMerge"
 readme = "README.en.md"
 keywords = ["skills", "merge", "ai", "llm", "conflict-resolution", "cli"]
 categories = ["command-line-utilities", "development-tools"]
