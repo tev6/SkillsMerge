@@ -151,6 +151,7 @@ pub async fn ai_merge(client: &LlmClient, skills: Vec<SkillIR>) -> Result<MergeR
                 rationale: matching_resolution
                     .map(|r| r.rationale.clone())
                     .unwrap_or_else(|| "AI determined this resolution".to_string()),
+                custom_content: None,
             });
             c
         })

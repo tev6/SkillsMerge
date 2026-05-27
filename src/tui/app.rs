@@ -225,6 +225,7 @@ impl App {
                 strategy: "interactive".to_string(),
                 selected: choice,
                 rationale: format!("User selected: {:?}", choice),
+                custom_content: None,
             });
 
             // Move to next conflict or finish

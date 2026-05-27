@@ -45,6 +45,7 @@ async fn run(args: cli::Cli) -> Result<(), SkillsMergeError> {
             ai_base_url,
             api_key,
             ai_output,
+            interactive,
         }) => {
             run_merge(
                 &input,
@@ -56,6 +57,7 @@ async fn run(args: cli::Cli) -> Result<(), SkillsMergeError> {
                 ai_base_url.as_deref(),
                 api_key.as_deref(),
                 ai_output,
+                interactive,
             )
             .await
         }
@@ -127,6 +129,7 @@ async fn run_merge(
     ai_base_url: Option<&str>,
     api_key: Option<&str>,
     ai_output: bool,
+    interactive: bool,
 ) -> Result<(), SkillsMergeError> {
     // Load skills
     let (skills, errors) = io::load_skills(input);
@@ -143,6 +146,59 @@ async fn run_merge(
     }
 
     println!("Loaded {} skill(s)", skills.len());
+
+    // Interactive mode: detect conflicts, prompt user, merge
+    if interactive {
+        // Use AI for conflict detection if available
+        let ai_cfg = build_llm_config(ai_model, ai_base_url, api_key);
+        let has_api_key = ai_cfg.api_key.as_ref().is_some_and(|k| !k.is_empty());
+        let has_model = !ai_cfg.model.is_empty();
+        let conflicts = if has_api_key && has_model {
+            println!("Using AI to detect conflicts...");
+            let llm_config = ai_cfg.to_llm_config();
+            let client = LlmClient::new(llm_config);
+            skillsmerge::ai::semantic::detect_semantic_conflicts(&client, &skills).await?
+        } else {
+            // Rule-based conflict detection
+            println!("Detecting rule-based conflicts...");
+            skillsmerge::conflict::detect_conflicts(&skills)
+        };
+
+        println!("Found {} conflict(s)\n", conflicts.len());
+
+        // Prompt user for each conflict
+        let (resolved, unresolved) =
+            skillsmerge::interactive::resolve_conflicts_interactively(conflicts, true);
+
+        let result = merger::merge_with_conflicts(skills, resolved, &MergeStrategy::AutoSelect);
+
+        // Output
+        let output_format = format_str
+            .parse()
+            .unwrap_or(skillsmerge::ir::OutputFormat::Markdown);
+        let content = output::generate(&result, output_format);
+
+        match output {
+            Some(path) => {
+                io::ensure_output_dir(path)?;
+                output::write_to_file(&content, path)?;
+                println!("Output written to: {}", path.display());
+            }
+            None => {
+                println!("{}", content);
+            }
+        }
+
+        let summary = reporter::generate_merge_summary(&result);
+        eprintln!("\n{}", summary);
+
+        if !unresolved.is_empty() {
+            return Err(SkillsMergeError::ConflictUnresolved {
+                count: unresolved.len(),
+            });
+        }
+        return Ok(());
+    }
 
     let result = if strategy_str == "ai" {
         // AI-driven merge
@@ -314,6 +370,7 @@ async fn run_batch(
         Some(&cfg.ai.base_url),
         cfg.ai.api_key.as_deref(),
         true,
+        false, // no interactive mode in batch
     )
     .await
 }

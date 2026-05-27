@@ -140,6 +140,7 @@ fn suggest_resolution(
                 "Instruction in '{}' has higher priority ({}) than '{}' ({})",
                 skill_a.name, instr_a.priority, skill_b.name, instr_b.priority
             ),
+            custom_content: None,
         }),
         std::cmp::Ordering::Less => Some(Resolution {
             strategy: "auto-select".to_string(),
@@ -148,6 +149,7 @@ fn suggest_resolution(
                 "Instruction in '{}' has higher priority ({}) than '{}' ({})",
                 skill_b.name, instr_b.priority, skill_a.name, instr_a.priority
             ),
+            custom_content: None,
         }),
         std::cmp::Ordering::Equal => None, // No automatic resolution possible
     }

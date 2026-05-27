@@ -107,6 +107,7 @@ fn resolve_conflicts(
                                 "Selected by skill priority ({} vs {})",
                                 pri_a, pri_b
                             ),
+                            custom_content: None,
                         });
                         resolved.push(conflict);
                     } else {
@@ -124,6 +125,7 @@ fn resolve_conflicts(
                     strategy: "semantic-merge".to_string(),
                     selected: ResolutionChoice::Merge,
                     rationale: "Combined both instructions".to_string(),
+                    custom_content: None,
                 });
                 resolved.push(conflict);
             }
@@ -135,6 +137,7 @@ fn resolve_conflicts(
                             strategy: "custom-latest".to_string(),
                             selected: ResolutionChoice::UseB,
                             rationale: "Using latest definition".to_string(),
+                            custom_content: None,
                         });
                         resolved.push(conflict);
                     }
@@ -180,7 +183,13 @@ fn build_merged_instructions(
                     excluded_ids.push(conflict.instruction_b.instruction_id);
                 }
                 ResolutionChoice::Merge => {
-                    // Both are included, will be combined
+                    // If there's custom content, exclude both originals
+                    // (custom text replaces both). Otherwise keep both
+                    // (they will be added alongside the combined version).
+                    if resolution.custom_content.is_some() {
+                        excluded_ids.push(conflict.instruction_a.instruction_id);
+                        excluded_ids.push(conflict.instruction_b.instruction_id);
+                    }
                 }
             }
         }
@@ -199,13 +208,15 @@ fn build_merged_instructions(
     for conflict in resolved {
         if let Some(resolution) = &conflict.suggested_resolution {
             if resolution.selected == ResolutionChoice::Merge {
-                let combined = Instruction::new(
-                    conflict.instruction_a.command.clone(),
+                let content = if let Some(ref custom) = resolution.custom_content {
+                    custom.clone()
+                } else {
                     format!(
                         "{}\n{}",
                         conflict.instruction_a.content, conflict.instruction_b.content
-                    ),
-                );
+                    )
+                };
+                let combined = Instruction::new(conflict.instruction_a.command.clone(), content);
                 instructions.push(combined);
             }
         }

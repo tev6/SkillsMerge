@@ -57,6 +57,10 @@ pub enum Commands {
         /// Use AI to generate polished output
         #[arg(long, default_value = "false")]
         ai_output: bool,
+
+        /// Interactive mode: prompt for each conflict
+        #[arg(long, short = 'i', default_value = "false")]
+        interactive: bool,
     },
 
     /// Check for conflicts using AI semantic analysis

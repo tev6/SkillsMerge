@@ -133,6 +133,9 @@ pub struct Resolution {
     pub strategy: String,
     pub selected: ResolutionChoice,
     pub rationale: String,
+    /// 用户手工输入的自定义合并文本（interactive 模式下选项 C）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_content: Option<String>,
 }
 
 /// 解决选择

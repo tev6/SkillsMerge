@@ -3,6 +3,7 @@ pub mod cli;
 pub mod config;
 pub mod conflict;
 pub mod error;
+pub mod interactive;
 pub mod io;
 pub mod ir;
 pub mod merger;
