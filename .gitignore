@@ -19,3 +19,4 @@ Thumbs.db
 # Build artifacts
 *.exe
 *.pdb
+tests/output/  

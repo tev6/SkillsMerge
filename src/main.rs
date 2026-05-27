@@ -248,7 +248,22 @@ async fn run_check(
     let conflicts = if !llm_config.api_key.is_empty() {
         println!("Using AI semantic analysis...");
         let client = LlmClient::new(llm_config);
-        skillsmerge::ai::semantic::detect_semantic_conflicts(&client, &skills).await?
+        match skillsmerge::ai::semantic::detect_semantic_conflicts(&client, &skills).await {
+            Ok(conflicts) => {
+                println!(
+                    "AI analysis complete: {} conflict(s) found",
+                    conflicts.len()
+                );
+                conflicts
+            }
+            Err(e) => {
+                eprintln!(
+                    "AI analysis failed: {}. Falling back to rule-based detection.",
+                    e
+                );
+                skillsmerge::conflict::detect_conflicts(&skills)
+            }
+        }
     } else {
         println!("No API key found, using rule-based conflict detection...");
         skillsmerge::conflict::detect_conflicts(&skills)
