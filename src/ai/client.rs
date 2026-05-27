@@ -92,7 +92,8 @@ pub struct LlmClient {
 impl LlmClient {
     pub fn new(config: LlmConfig) -> Self {
         let http = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(15))
+            .timeout(std::time::Duration::from_secs(120))
+            .http1_only()
             .build()
             .unwrap_or_default();
         Self { config, http }
@@ -132,23 +133,34 @@ impl LlmClient {
                 reason: format!("Failed to send request: {}", e),
             })?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
+        let status = response.status();
+        let body_text = response
+            .text()
+            .await
+            .map_err(|e| SkillsMergeError::ParseError {
+                file: "AI response".to_string(),
+                reason: format!(
+                    "Failed to read response body: {}. Status was: {}",
+                    e, status
+                ),
+            })?;
+
+        if !status.is_success() {
             return Err(SkillsMergeError::ParseError {
                 file: "AI response".to_string(),
-                reason: format!("API error ({}): {}", status, body),
+                reason: format!("API error ({}): {}", status, body_text),
             });
         }
 
         let chat_response: ChatResponse =
-            response
-                .json()
-                .await
-                .map_err(|e| SkillsMergeError::ParseError {
-                    file: "AI response".to_string(),
-                    reason: format!("Failed to parse response: {}", e),
-                })?;
+            serde_json::from_str(&body_text).map_err(|e| SkillsMergeError::ParseError {
+                file: "AI response".to_string(),
+                reason: format!(
+                    "Failed to parse response: {}. Body (first 500 chars): {}",
+                    e,
+                    &body_text[..body_text.len().min(500)]
+                ),
+            })?;
 
         chat_response
             .choices

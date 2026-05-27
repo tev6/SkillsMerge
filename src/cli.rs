@@ -30,8 +30,8 @@ pub enum Commands {
         #[arg(short, long)]
         output: Option<std::path::PathBuf>,
 
-        /// Merge strategy: auto, ai, preserve-all, interactive, semantic
-        #[arg(short, long, default_value = "auto")]
+        /// Merge strategy: ai, auto, preserve-all, interactive, semantic
+        #[arg(short, long, default_value = "ai")]
         strategy: String,
 
         /// Output format: markdown, json, yaml, toml
