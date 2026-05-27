@@ -127,10 +127,73 @@ skillsmerge merge input/ -o merged.md --strategy auto
 skillsmerge check input/
 
 # Interactive TUI
-skillsmerge interactive input/
+skillsmerge interactive input/ -o merged.md
 
 # Batch processing
 skillsmerge batch --config rules.toml input/ -o output/
+```
+
+### Interactive TUI Workflow
+
+The interactive mode lets you review and resolve conflicts manually with a terminal UI:
+
+```bash
+skillsmerge interactive skill-a.md skill-b.md -o merged.md
+```
+
+**Keyboard shortcuts in the TUI:**
+
+| Key | Action |
+|-----|--------|
+| `1`/`L` | Load Skills |
+| `2`/`C` | View detected conflicts |
+| `3`/`M` | Start merge process |
+| `4`/`S` | Settings |
+| `5`/`H` | Help |
+| `Q` | Quit |
+
+**During conflict resolution:**
+
+| Key | Action |
+|-----|--------|
+| `A` | Use Source A's instruction |
+| `B` | Use Source B's instruction |
+| `M` | Merge both instructions |
+| `S` | Skip this conflict |
+| `Esc` | Go back |
+
+After resolving all conflicts, the merged result is saved to the file specified with `-o`, or printed to stdout.
+
+### Output Example
+
+After merging, the output includes a structured document with all resolutions explained:
+
+```markdown
+# Merged Skill Collection
+
+## Metadata
+- Original Skills: Merged skill from: Skill A, Skill B, skill-c
+- Total Instructions: 7
+- Merge Duration: 0ms
+- Resolution: all conflicts resolved
+
+## Conflicts
+
+### Conflict #1: instruction_override
+> **Source**: Skill A vs Skill B
+> **Resolution**: UseB (auto-select)
+> **Rationale**: Selected by skill priority (10 vs 20)
+
+## Instructions
+
+### Category: Security
+
+- **Never** (priority: 20): Never commit secrets to version control
+- **Always** (priority: 18): Always validate user input
+
+### Category: Style
+
+- **Use** (priority: 5): Use descriptive variable names
 ```
 
 ### Merge Strategies

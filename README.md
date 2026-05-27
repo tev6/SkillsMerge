@@ -127,10 +127,73 @@ skillsmerge merge input/ -o merged.md --strategy auto
 skillsmerge check input/
 
 # 交互式 TUI
-skillsmerge interactive input/
+skillsmerge interactive input/ -o merged.md
 
 # 批量处理
 skillsmerge batch --config rules.toml input/ -o output/
+```
+
+### 交互式 TUI 工作流
+
+交互模式让你在终端中手动审查并解决冲突：
+
+```bash
+skillsmerge interactive skill-a.md skill-b.md -o merged.md
+```
+
+**TUI 键盘快捷键：**
+
+| 按键 | 功能 |
+|------|------|
+| `1`/`L` | 加载技能文件 |
+| `2`/`C` | 查看检测到的冲突 |
+| `3`/`M` | 开始合并流程 |
+| `4`/`S` | 设置 |
+| `5`/`H` | 帮助 |
+| `Q` | 退出 |
+
+**冲突解决时的快捷键：**
+
+| 按键 | 功能 |
+|------|------|
+| `A` | 使用来源 A 的指令 |
+| `B` | 使用来源 B 的指令 |
+| `M` | 合并两条指令 |
+| `S` | 跳过此冲突 |
+| `Esc` | 返回 |
+
+解决所有冲突后，合并结果会自动保存到 `-o` 指定的文件，或输出到终端。
+
+### 输出示例
+
+合并后的输出包含结构化的文档，附有每个冲突解决的解释：
+
+```markdown
+# Merged Skill Collection
+
+## Metadata
+- Original Skills: Merged skill from: Skill A, Skill B, skill-c
+- Total Instructions: 7
+- Merge Duration: 0ms
+- Resolution: all conflicts resolved
+
+## Conflicts
+
+### Conflict #1: instruction_override
+> **Source**: Skill A vs Skill B
+> **Resolution**: UseB (auto-select)
+> **Rationale**: Selected by skill priority (10 vs 20)
+
+## Instructions
+
+### Category: Security
+
+- **Never** (priority: 20): Never commit secrets to version control
+- **Always** (priority: 18): Always validate user input
+
+### Category: Style
+
+- **Use** (priority: 5): Use descriptive variable names
 ```
 
 ### 合并策略
