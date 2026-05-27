@@ -82,9 +82,15 @@ async fn run(args: cli::Cli) -> Result<(), SkillsMergeError> {
         }) => run_batch(&config_path, &input, output.as_deref()).await,
         Some(Commands::Interactive {
             input,
+            output,
             ai_model,
             api_key,
-        }) => run_interactive(&input, ai_model.as_deref(), api_key.as_deref()),
+        }) => run_interactive(
+            &input,
+            output.as_deref(),
+            ai_model.as_deref(),
+            api_key.as_deref(),
+        ),
         None => {
             cli::Cli::try_parse_from(["skillsmerge", "--help"]).ok();
             Ok(())
@@ -299,6 +305,7 @@ async fn run_batch(
 
 fn run_interactive(
     input: &[std::path::PathBuf],
+    output: Option<&std::path::Path>,
     ai_model: Option<&str>,
     api_key: Option<&str>,
 ) -> Result<(), SkillsMergeError> {
@@ -307,6 +314,12 @@ fn run_interactive(
         for e in &errors {
             eprintln!("Warning: {}", e);
         }
+    }
+
+    if skills.is_empty() {
+        return Err(SkillsMergeError::FileNotFound {
+            path: "No valid SKILLS files found".to_string(),
+        });
     }
 
     let ai_config = build_llm_config(ai_model, None, api_key);
@@ -321,5 +334,35 @@ fn run_interactive(
         "Starting interactive mode with {} skill(s)...",
         skills.len()
     );
-    skillsmerge::tui::run(skills)
+    println!("Navigate conflicts with A/B/M/S keys. Press Q to quit.\n");
+
+    let (skills, conflicts) = skillsmerge::tui::run(skills)?;
+
+    // Merge using the user-resolved conflicts and save output
+    let result = merger::merge_with_conflicts(skills, conflicts, &MergeStrategy::AutoSelect);
+
+    let content = output::generate(&result, skillsmerge::ir::OutputFormat::Markdown);
+
+    match output {
+        Some(path) => {
+            io::ensure_output_dir(path)?;
+            output::write_to_file(&content, path)?;
+            println!("\nMerged output written to: {}", path.display());
+        }
+        None => {
+            println!("\n--- Merged Output ---\n");
+            println!("{}", content);
+        }
+    }
+
+    let summary = reporter::generate_merge_summary(&result);
+    eprintln!("\n{}", summary);
+
+    if !result.conflicts_unresolved.is_empty() {
+        return Err(SkillsMergeError::ConflictUnresolved {
+            count: result.conflicts_unresolved.len(),
+        });
+    }
+
+    Ok(())
 }

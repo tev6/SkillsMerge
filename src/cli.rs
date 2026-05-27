@@ -103,6 +103,10 @@ pub enum Commands {
         #[arg(num_args = 0..)]
         input: Vec<std::path::PathBuf>,
 
+        /// Output file path (saves merged result after exit)
+        #[arg(short, long)]
+        output: Option<std::path::PathBuf>,
+
         /// AI model to use
         #[arg(long)]
         ai_model: Option<String>,

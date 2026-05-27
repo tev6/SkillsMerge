@@ -8,12 +8,19 @@ use crate::ir::{
 
 /// Merge multiple skills using the specified strategy
 pub fn merge(skills: Vec<SkillIR>, strategy: &MergeStrategy) -> MergeResult {
+    let all_conflicts = conflict::detect_conflicts(&skills);
+    merge_with_conflicts(skills, all_conflicts, strategy)
+}
+
+/// Merge skills using pre-resolved conflicts (from interactive mode)
+pub fn merge_with_conflicts(
+    skills: Vec<SkillIR>,
+    all_conflicts: Vec<Conflict>,
+    strategy: &MergeStrategy,
+) -> MergeResult {
     let start = std::time::Instant::now();
     let total_skills = skills.len();
     let total_instructions: usize = skills.iter().map(|s| s.instructions.len()).sum();
-
-    // Detect conflicts
-    let all_conflicts = conflict::detect_conflicts(&skills);
     let conflicts_found = all_conflicts.len();
 
     // Resolve conflicts based on strategy

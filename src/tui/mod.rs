@@ -2,10 +2,10 @@ pub mod app;
 pub mod ui;
 
 use crate::error::Result;
-use crate::ir::SkillIR;
+use crate::ir::{Conflict, SkillIR};
 
-/// Run the TUI application
-pub fn run(skills: Vec<SkillIR>) -> Result<()> {
+/// Run the TUI application, returning skills and resolved conflicts
+pub fn run(skills: Vec<SkillIR>) -> Result<(Vec<SkillIR>, Vec<Conflict>)> {
     let mut app = app::App::new(skills);
 
     crossterm::terminal::enable_raw_mode().map_err(|e| {
@@ -52,5 +52,5 @@ pub fn run(skills: Vec<SkillIR>) -> Result<()> {
     )
     .map_err(crate::error::SkillsMergeError::IoError)?;
 
-    Ok(())
+    Ok(app.into_parts())
 }

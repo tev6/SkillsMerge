@@ -273,4 +273,9 @@ impl App {
         }
         false
     }
+
+    /// Consume the app and return skills + conflicts for merge
+    pub fn into_parts(self) -> (Vec<SkillIR>, Vec<Conflict>) {
+        (self.skills, self.conflicts)
+    }
 }
