@@ -3,8 +3,12 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(name = "skillsmerge")]
 #[command(version = "1.0.0")]
-#[command(about = "An AI-powered SKILLS merger - uses LLM to intelligently merge and resolve conflicts")]
-#[command(after_help = "Examples:\n  skillsmerge merge skill-a.md skill-b.md -o merged.md\n  skillsmerge merge input/ -o merged.md --ai-model gpt-4o\n  skillsmerge check input/*.md\n  skillsmerge batch --config rules.toml input/ -o output/\n\nAPI Key:\n  Set SKILLSMERGE_API_KEY or OPENAI_API_KEY environment variable,\n  or use --api-key flag, or configure in config file.")]
+#[command(
+    about = "An AI-powered SKILLS merger - uses LLM to intelligently merge and resolve conflicts"
+)]
+#[command(
+    after_help = "Examples:\n  skillsmerge merge skill-a.md skill-b.md -o merged.md\n  skillsmerge merge input/ -o merged.md --ai-model gpt-4o\n  skillsmerge check input/*.md\n  skillsmerge batch --config rules.toml input/ -o output/\n\nAPI Key:\n  Set SKILLSMERGE_API_KEY or OPENAI_API_KEY environment variable,\n  or use --api-key flag, or configure in config file."
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,

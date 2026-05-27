@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use skillsmerge::parser;
 use skillsmerge::conflict;
+use skillsmerge::ir::{InputFormat, MergeStrategy, OutputFormat};
 use skillsmerge::merger;
 use skillsmerge::output;
-use skillsmerge::ir::{MergeStrategy, OutputFormat, InputFormat};
+use skillsmerge::parser;
 
 fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/skills")
@@ -52,12 +52,30 @@ fn test_parse_toml() {
 
 #[test]
 fn test_detect_format() {
-    assert_eq!(parser::detect_format(PathBuf::from("test.md").as_path()), InputFormat::Markdown);
-    assert_eq!(parser::detect_format(PathBuf::from("test.json").as_path()), InputFormat::Json);
-    assert_eq!(parser::detect_format(PathBuf::from("test.yaml").as_path()), InputFormat::Yaml);
-    assert_eq!(parser::detect_format(PathBuf::from("test.yml").as_path()), InputFormat::Yaml);
-    assert_eq!(parser::detect_format(PathBuf::from("test.toml").as_path()), InputFormat::Toml);
-    assert_eq!(parser::detect_format(PathBuf::from("test.txt").as_path()), InputFormat::Markdown);
+    assert_eq!(
+        parser::detect_format(PathBuf::from("test.md").as_path()),
+        InputFormat::Markdown
+    );
+    assert_eq!(
+        parser::detect_format(PathBuf::from("test.json").as_path()),
+        InputFormat::Json
+    );
+    assert_eq!(
+        parser::detect_format(PathBuf::from("test.yaml").as_path()),
+        InputFormat::Yaml
+    );
+    assert_eq!(
+        parser::detect_format(PathBuf::from("test.yml").as_path()),
+        InputFormat::Yaml
+    );
+    assert_eq!(
+        parser::detect_format(PathBuf::from("test.toml").as_path()),
+        InputFormat::Toml
+    );
+    assert_eq!(
+        parser::detect_format(PathBuf::from("test.txt").as_path()),
+        InputFormat::Markdown
+    );
 }
 
 #[test]
@@ -67,7 +85,10 @@ fn test_conflict_detection() {
 
     let conflicts = conflict::detect_conflicts(&[skill_a, skill_b]);
     // skill-a and skill-b have conflicting instructions (same commands, different content)
-    assert!(!conflicts.is_empty(), "Should detect conflicts between skill-a and skill-b");
+    assert!(
+        !conflicts.is_empty(),
+        "Should detect conflicts between skill-a and skill-b"
+    );
 }
 
 #[test]
@@ -76,7 +97,10 @@ fn test_no_conflicts_compatible_skills() {
     let skill_d = parser::parse_file(&fixtures_dir().join("skill-d.yaml")).unwrap();
 
     let conflicts = conflict::detect_conflicts(&[skill_c, skill_d]);
-    assert!(conflicts.is_empty(), "Compatible skills should have no conflicts");
+    assert!(
+        conflicts.is_empty(),
+        "Compatible skills should have no conflicts"
+    );
 }
 
 #[test]
@@ -106,7 +130,7 @@ fn test_merge_semantic() {
 
     let result = merger::merge(vec![skill_a, skill_b], &MergeStrategy::SemanticMerge);
     assert!(!result.merged_skill.instructions.is_empty());
-    assert!(result.conflicts_resolved.len() > 0);
+    assert!(!result.conflicts_resolved.is_empty());
 }
 
 #[test]

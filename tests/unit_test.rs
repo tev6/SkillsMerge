@@ -1,7 +1,7 @@
-use skillsmerge::ir::*;
-use skillsmerge::reporter;
 use skillsmerge::config;
 use skillsmerge::io;
+use skillsmerge::ir::*;
+use skillsmerge::reporter;
 
 #[test]
 fn test_skill_ir_creation() {
@@ -36,15 +36,30 @@ fn test_severity_ordering() {
 
 #[test]
 fn test_merge_strategy_from_str() {
-    assert_eq!("auto".parse::<MergeStrategy>().unwrap(), MergeStrategy::AutoSelect);
-    assert_eq!("preserve-all".parse::<MergeStrategy>().unwrap(), MergeStrategy::PreserveAll);
-    assert_eq!("interactive".parse::<MergeStrategy>().unwrap(), MergeStrategy::Interactive);
-    assert_eq!("semantic".parse::<MergeStrategy>().unwrap(), MergeStrategy::SemanticMerge);
+    assert_eq!(
+        "auto".parse::<MergeStrategy>().unwrap(),
+        MergeStrategy::AutoSelect
+    );
+    assert_eq!(
+        "preserve-all".parse::<MergeStrategy>().unwrap(),
+        MergeStrategy::PreserveAll
+    );
+    assert_eq!(
+        "interactive".parse::<MergeStrategy>().unwrap(),
+        MergeStrategy::Interactive
+    );
+    assert_eq!(
+        "semantic".parse::<MergeStrategy>().unwrap(),
+        MergeStrategy::SemanticMerge
+    );
 }
 
 #[test]
 fn test_output_format_from_str() {
-    assert_eq!("markdown".parse::<OutputFormat>().unwrap(), OutputFormat::Markdown);
+    assert_eq!(
+        "markdown".parse::<OutputFormat>().unwrap(),
+        OutputFormat::Markdown
+    );
     assert_eq!("json".parse::<OutputFormat>().unwrap(), OutputFormat::Json);
     assert_eq!("yaml".parse::<OutputFormat>().unwrap(), OutputFormat::Yaml);
     assert_eq!("toml".parse::<OutputFormat>().unwrap(), OutputFormat::Toml);
@@ -115,8 +130,7 @@ fn test_reporter_conflict_report() {
 
 #[test]
 fn test_io_collect_files() {
-    let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/skills");
+    let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/skills");
     let files = io::collect_input_files(&[dir]);
     assert!(!files.is_empty(), "Should find fixture files");
 }

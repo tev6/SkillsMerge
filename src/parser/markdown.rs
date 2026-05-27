@@ -75,7 +75,8 @@ pub fn parse(content: &str, path: &Path) -> Result<SkillIR> {
             }
             Event::End(TagEnd::CodeBlock) => {
                 in_code_block = false;
-                if current_section.as_deref() == Some("Configuration") && code_block_lang == "json" {
+                if current_section.as_deref() == Some("Configuration") && code_block_lang == "json"
+                {
                     if let Ok(serde_json::Value::Object(map)) =
                         serde_json::from_str(&code_block_content)
                     {
@@ -126,10 +127,10 @@ pub fn parse(content: &str, path: &Path) -> Result<SkillIR> {
 
 fn split_front_matter(content: &str) -> (Option<&str>, &str) {
     let trimmed = content.trim_start();
-    if trimmed.starts_with("---") {
-        if let Some(end) = trimmed[3..].find("---") {
-            let fm = &trimmed[3..end + 3];
-            let body = &trimmed[end + 6..];
+    if let Some(stripped) = trimmed.strip_prefix("---") {
+        if let Some(end) = stripped.find("---") {
+            let fm = &stripped[..end];
+            let body = &stripped[end + 3..];
             return (Some(fm.trim()), body);
         }
     }

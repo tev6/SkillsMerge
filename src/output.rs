@@ -16,11 +16,20 @@ fn generate_markdown(result: &MergeResult) -> String {
 
     // Front matter
     output.push_str("---\n");
-    output.push_str(&format!("generated_by: SkillsMerge\n"));
-    output.push_str(&format!("version: 1.0.0\n"));
-    output.push_str(&format!("source_files: {}\n", result.statistics.total_skills));
-    output.push_str(&format!("merge_date: \"{}\"\n", chrono::Utc::now().format("%Y-%m-%d")));
-    output.push_str(&format!("conflict_count: {}\n", result.conflicts_resolved.len() + result.conflicts_unresolved.len()));
+    output.push_str("generated_by: SkillsMerge\n");
+    output.push_str("version: 1.0.0\n");
+    output.push_str(&format!(
+        "source_files: {}\n",
+        result.statistics.total_skills
+    ));
+    output.push_str(&format!(
+        "merge_date: \"{}\"\n",
+        chrono::Utc::now().format("%Y-%m-%d")
+    ));
+    output.push_str(&format!(
+        "conflict_count: {}\n",
+        result.conflicts_resolved.len() + result.conflicts_unresolved.len()
+    ));
     output.push_str("---\n\n");
 
     // Title
@@ -28,11 +37,25 @@ fn generate_markdown(result: &MergeResult) -> String {
 
     // Metadata section
     output.push_str("## Metadata\n");
-    output.push_str(&format!("- Original Skills: {}\n", result.merged_skill.description.as_deref().unwrap_or("N/A")));
-    output.push_str(&format!("- Total Instructions: {}\n", result.statistics.total_instructions));
-    output.push_str(&format!("- Merge Duration: {}ms\n", result.statistics.merge_duration_ms));
-    output.push_str(&format!("- Resolution: {}\n\n",
-        if result.conflicts_unresolved.is_empty() { "all conflicts resolved" } else { "unresolved conflicts remain" }
+    output.push_str(&format!(
+        "- Original Skills: {}\n",
+        result.merged_skill.description.as_deref().unwrap_or("N/A")
+    ));
+    output.push_str(&format!(
+        "- Total Instructions: {}\n",
+        result.statistics.total_instructions
+    ));
+    output.push_str(&format!(
+        "- Merge Duration: {}ms\n",
+        result.statistics.merge_duration_ms
+    ));
+    output.push_str(&format!(
+        "- Resolution: {}\n\n",
+        if result.conflicts_unresolved.is_empty() {
+            "all conflicts resolved"
+        } else {
+            "unresolved conflicts remain"
+        }
     ));
 
     // Conflicts section
@@ -40,21 +63,38 @@ fn generate_markdown(result: &MergeResult) -> String {
         output.push_str("## Conflicts\n\n");
 
         for (i, conflict) in result.conflicts_resolved.iter().enumerate() {
-            output.push_str(&format!("### Conflict #{}: {}\n", i + 1, conflict.conflict_type));
-            output.push_str(&format!("> **Source**: {} vs {}\n", conflict.instruction_a.skill_name, conflict.instruction_b.skill_name));
+            output.push_str(&format!(
+                "### Conflict #{}: {}\n",
+                i + 1,
+                conflict.conflict_type
+            ));
+            output.push_str(&format!(
+                "> **Source**: {} vs {}\n",
+                conflict.instruction_a.skill_name, conflict.instruction_b.skill_name
+            ));
             if let Some(resolution) = &conflict.suggested_resolution {
-                output.push_str(&format!("> **Resolution**: {:?} ({})\n", resolution.selected, resolution.strategy));
+                output.push_str(&format!(
+                    "> **Resolution**: {:?} ({})\n",
+                    resolution.selected, resolution.strategy
+                ));
                 output.push_str(&format!("> **Rationale**: {}\n", resolution.rationale));
             }
-            output.push_str("\n");
+            output.push('\n');
         }
 
         for (i, conflict) in result.conflicts_unresolved.iter().enumerate() {
-            output.push_str(&format!("### Unresolved Conflict #{}: {}\n", i + 1, conflict.conflict_type));
-            output.push_str(&format!("> **Source**: {} vs {}\n", conflict.instruction_a.skill_name, conflict.instruction_b.skill_name));
+            output.push_str(&format!(
+                "### Unresolved Conflict #{}: {}\n",
+                i + 1,
+                conflict.conflict_type
+            ));
+            output.push_str(&format!(
+                "> **Source**: {} vs {}\n",
+                conflict.instruction_a.skill_name, conflict.instruction_b.skill_name
+            ));
             output.push_str(&format!("> **Severity**: {}\n", conflict.severity));
             output.push_str(&format!("> **Description**: {}\n", conflict.description));
-            output.push_str("\n");
+            output.push('\n');
         }
     }
 
@@ -68,7 +108,10 @@ fn generate_markdown(result: &MergeResult) -> String {
                 output.push_str(&format!("### Category: {}\n\n", cat));
             }
         }
-        output.push_str(&format!("- **{}** (priority: {}): {}\n", instr.command, instr.priority, instr.content));
+        output.push_str(&format!(
+            "- **{}** (priority: {}): {}\n",
+            instr.command, instr.priority, instr.content
+        ));
     }
 
     // Warnings
@@ -93,17 +136,32 @@ fn generate_yaml(result: &MergeResult) -> String {
 fn generate_toml(result: &MergeResult) -> String {
     // TOML doesn't support all nested structures well, use simplified output
     let mut output = String::new();
-    output.push_str(&format!("[metadata]\n"));
-    output.push_str(&format!("total_skills = {}\n", result.statistics.total_skills));
-    output.push_str(&format!("total_instructions = {}\n", result.statistics.total_instructions));
-    output.push_str(&format!("conflicts_found = {}\n", result.statistics.conflicts_found));
-    output.push_str(&format!("conflicts_resolved = {}\n", result.conflicts_resolved.len()));
-    output.push_str("\n");
+    output.push_str("[metadata]\n");
+    output.push_str(&format!(
+        "total_skills = {}\n",
+        result.statistics.total_skills
+    ));
+    output.push_str(&format!(
+        "total_instructions = {}\n",
+        result.statistics.total_instructions
+    ));
+    output.push_str(&format!(
+        "conflicts_found = {}\n",
+        result.statistics.conflicts_found
+    ));
+    output.push_str(&format!(
+        "conflicts_resolved = {}\n",
+        result.conflicts_resolved.len()
+    ));
+    output.push('\n');
 
     output.push_str("[[instructions]]\n");
     for instr in &result.merged_skill.instructions {
         output.push_str(&format!("command = \"{}\"\n", instr.command));
-        output.push_str(&format!("content = \"{}\"\n", instr.content.replace('"', "\\\"")));
+        output.push_str(&format!(
+            "content = \"{}\"\n",
+            instr.content.replace('"', "\\\"")
+        ));
         output.push_str(&format!("priority = {}\n", instr.priority));
         if let Some(cat) = &instr.category {
             output.push_str(&format!("category = \"{}\"\n", cat));

@@ -39,22 +39,34 @@ struct CompatiblePair {
 }
 
 /// Use AI to detect semantic conflicts between skills
-pub async fn detect_semantic_conflicts(client: &LlmClient, skills: &[SkillIR]) -> Result<Vec<Conflict>> {
-    let skills_json = serde_json::to_string_pretty(&skills.iter().map(|s| serde_json::json!({
-        "name": s.name,
-        "description": s.description,
-        "instructions": s.instructions.iter().map(|i| serde_json::json!({
-            "command": i.command,
-            "content": i.content,
-            "category": i.category,
-            "priority": i.priority,
-        })).collect::<Vec<_>>(),
-    })).collect::<Vec<_>>())?;
+pub async fn detect_semantic_conflicts(
+    client: &LlmClient,
+    skills: &[SkillIR],
+) -> Result<Vec<Conflict>> {
+    let skills_json = serde_json::to_string_pretty(
+        &skills
+            .iter()
+            .map(|s| {
+                serde_json::json!({
+                    "name": s.name,
+                    "description": s.description,
+                    "instructions": s.instructions.iter().map(|i| serde_json::json!({
+                        "command": i.command,
+                        "content": i.content,
+                        "category": i.category,
+                        "priority": i.priority,
+                    })).collect::<Vec<_>>(),
+                })
+            })
+            .collect::<Vec<_>>(),
+    )?;
 
-    let response = client.ask(
-        prompts::semantic_analysis_system(),
-        &prompts::detect_conflicts_prompt(&skills_json),
-    ).await?;
+    let response = client
+        .ask(
+            prompts::semantic_analysis_system(),
+            &prompts::detect_conflicts_prompt(&skills_json),
+        )
+        .await?;
 
     let analysis: ConflictAnalysis = parse_json_response(&response)?;
 
@@ -79,24 +91,30 @@ pub async fn detect_semantic_conflicts(client: &LlmClient, skills: &[SkillIR]) -
         let instr_a = InstructionRef {
             skill_name: ac.instruction_a.skill_name.clone(),
             instruction_id: uuid::Uuid::new_v4(),
-            command: ac.instruction_a.instruction.split_whitespace().next().unwrap_or("unknown").to_string(),
+            command: ac
+                .instruction_a
+                .instruction
+                .split_whitespace()
+                .next()
+                .unwrap_or("unknown")
+                .to_string(),
             content: ac.instruction_a.instruction.clone(),
         };
 
         let instr_b = InstructionRef {
             skill_name: ac.instruction_b.skill_name.clone(),
             instruction_id: uuid::Uuid::new_v4(),
-            command: ac.instruction_b.instruction.split_whitespace().next().unwrap_or("unknown").to_string(),
+            command: ac
+                .instruction_b
+                .instruction
+                .split_whitespace()
+                .next()
+                .unwrap_or("unknown")
+                .to_string(),
             content: ac.instruction_b.instruction.clone(),
         };
 
-        let mut conflict = Conflict::new(
-            conflict_type,
-            severity,
-            instr_a,
-            instr_b,
-            ac.description,
-        );
+        let mut conflict = Conflict::new(conflict_type, severity, instr_a, instr_b, ac.description);
 
         if !ac.scenario.is_empty() {
             conflict.description = format!("{}\n\nScenario: {}", conflict.description, ac.scenario);
@@ -106,7 +124,7 @@ pub async fn detect_semantic_conflicts(client: &LlmClient, skills: &[SkillIR]) -
     }
 
     // Sort by severity descending
-    conflicts.sort_by(|a, b| b.severity.cmp(&a.severity));
+    conflicts.sort_by_key(|b| std::cmp::Reverse(b.severity));
     Ok(conflicts)
 }
 

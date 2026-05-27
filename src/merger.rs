@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::conflict;
 use crate::ir::{
-    Conflict, Instruction, InstructionRef, MergeResult, MergeStatistics, MergeStrategy,
-    Resolution, ResolutionChoice, SkillIR,
+    Conflict, Instruction, InstructionRef, MergeResult, MergeStatistics, MergeStrategy, Resolution,
+    ResolutionChoice, SkillIR,
 };
 
 /// Merge multiple skills using the specified strategy
@@ -25,13 +25,23 @@ pub fn merge(skills: Vec<SkillIR>, strategy: &MergeStrategy) -> MergeResult {
     let merged_metadata = merge_metadata(&skills);
 
     let mut merged_skill = SkillIR::new(
-        format!("Merged-{}", skills.first().map(|s| s.name.clone()).unwrap_or_default()),
+        format!(
+            "Merged-{}",
+            skills.first().map(|s| s.name.clone()).unwrap_or_default()
+        ),
         std::path::PathBuf::from("merged"),
-        skills.first().map(|s| s.source.format).unwrap_or(crate::ir::InputFormat::Markdown),
+        skills
+            .first()
+            .map(|s| s.source.format)
+            .unwrap_or(crate::ir::InputFormat::Markdown),
     );
     merged_skill.description = Some(format!(
         "Merged skill from: {}",
-        skills.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", ")
+        skills
+            .iter()
+            .map(|s| s.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
     ));
     merged_skill.instructions = merged_instructions;
     merged_skill.config = merged_config;
@@ -81,8 +91,15 @@ fn resolve_conflicts(
                     if pri_a != pri_b {
                         conflict.suggested_resolution = Some(Resolution {
                             strategy: "auto-select".to_string(),
-                            selected: if pri_a > pri_b { ResolutionChoice::UseA } else { ResolutionChoice::UseB },
-                            rationale: format!("Selected by skill priority ({} vs {})", pri_a, pri_b),
+                            selected: if pri_a > pri_b {
+                                ResolutionChoice::UseA
+                            } else {
+                                ResolutionChoice::UseB
+                            },
+                            rationale: format!(
+                                "Selected by skill priority ({} vs {})",
+                                pri_a, pri_b
+                            ),
                         });
                         resolved.push(conflict);
                     } else {
@@ -177,7 +194,10 @@ fn build_merged_instructions(
             if resolution.selected == ResolutionChoice::Merge {
                 let combined = Instruction::new(
                     conflict.instruction_a.command.clone(),
-                    format!("{}\n{}", conflict.instruction_a.content, conflict.instruction_b.content),
+                    format!(
+                        "{}\n{}",
+                        conflict.instruction_a.content, conflict.instruction_b.content
+                    ),
                 );
                 instructions.push(combined);
             }
@@ -186,9 +206,9 @@ fn build_merged_instructions(
 
     // Sort by priority (descending), then by category
     instructions.sort_by(|a, b| {
-        b.priority.cmp(&a.priority).then_with(|| {
-            a.category.cmp(&b.category)
-        })
+        b.priority
+            .cmp(&a.priority)
+            .then_with(|| a.category.cmp(&b.category))
     });
 
     instructions

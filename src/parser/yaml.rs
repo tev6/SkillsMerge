@@ -27,12 +27,11 @@ struct YamlInstruction {
 }
 
 pub fn parse(content: &str, path: &Path) -> Result<SkillIR> {
-    let yaml_skill: YamlSkill = serde_yaml::from_str(content).map_err(|e| {
-        SkillsMergeError::ParseError {
+    let yaml_skill: YamlSkill =
+        serde_yaml::from_str(content).map_err(|e| SkillsMergeError::ParseError {
             file: path.display().to_string(),
             reason: format!("Invalid YAML: {}", e),
-        }
-    })?;
+        })?;
 
     let mut instructions = Vec::new();
     for yi in &yaml_skill.instructions {

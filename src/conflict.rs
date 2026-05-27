@@ -66,7 +66,8 @@ pub fn detect_conflicts(skills: &[SkillIR]) -> Vec<Conflict> {
                     ];
 
                     // Suggest resolution based on priority
-                    conflict.suggested_resolution = suggest_resolution(instr_a, instr_b, skill_a, skill_b);
+                    conflict.suggested_resolution =
+                        suggest_resolution(instr_a, instr_b, skill_a, skill_b);
 
                     conflicts.push(conflict);
                 }
@@ -79,7 +80,7 @@ pub fn detect_conflicts(skills: &[SkillIR]) -> Vec<Conflict> {
     conflicts.extend(circular);
 
     // Step 5: Sort by severity (descending)
-    conflicts.sort_by(|a, b| b.severity.cmp(&a.severity));
+    conflicts.sort_by_key(|b| std::cmp::Reverse(b.severity));
     conflicts
 }
 
@@ -188,13 +189,23 @@ fn detect_circular_dependencies(skills: &[SkillIR]) -> Vec<Conflict> {
     for i in 0..skills.len() {
         if !visited[i] {
             let mut path = Vec::new();
-            dfs_cycle(i, &graph, &name_map, &mut visited, &mut in_stack, &mut path, &mut conflicts, skills);
+            dfs_cycle(
+                i,
+                &graph,
+                &name_map,
+                &mut visited,
+                &mut in_stack,
+                &mut path,
+                &mut conflicts,
+                skills,
+            );
         }
     }
 
     conflicts
 }
 
+#[allow(clippy::too_many_arguments)]
 fn dfs_cycle(
     node: usize,
     graph: &HashMap<String, Vec<String>>,
@@ -224,13 +235,39 @@ fn dfs_cycle(
                     let conflict = Conflict::new(
                         ConflictType::CircularDependency,
                         Severity::Critical,
-                        make_instruction_ref(&skills[node], &skills[node].instructions.first().cloned().unwrap_or_else(|| crate::ir::Instruction::new("N/A".to_string(), "N/A".to_string()))),
-                        make_instruction_ref(&skills[dep_idx], &skills[dep_idx].instructions.first().cloned().unwrap_or_else(|| crate::ir::Instruction::new("N/A".to_string(), "N/A".to_string()))),
+                        make_instruction_ref(
+                            &skills[node],
+                            &skills[node]
+                                .instructions
+                                .first()
+                                .cloned()
+                                .unwrap_or_else(|| {
+                                    crate::ir::Instruction::new(
+                                        "N/A".to_string(),
+                                        "N/A".to_string(),
+                                    )
+                                }),
+                        ),
+                        make_instruction_ref(
+                            &skills[dep_idx],
+                            &skills[dep_idx]
+                                .instructions
+                                .first()
+                                .cloned()
+                                .unwrap_or_else(|| {
+                                    crate::ir::Instruction::new(
+                                        "N/A".to_string(),
+                                        "N/A".to_string(),
+                                    )
+                                }),
+                        ),
                         format!("Circular dependency detected: {}", cycle_path.join(" -> ")),
                     );
                     conflicts.push(conflict);
                 } else if !visited[dep_idx] {
-                    dfs_cycle(dep_idx, graph, name_map, visited, in_stack, path, conflicts, skills);
+                    dfs_cycle(
+                        dep_idx, graph, name_map, visited, in_stack, path, conflicts, skills,
+                    );
                 }
             }
         }

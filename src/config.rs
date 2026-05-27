@@ -84,7 +84,9 @@ impl Default for Config {
 impl AiConfig {
     /// Build LlmConfig from this AiConfig, resolving values from env if not set
     pub fn to_llm_config(&self) -> LlmConfig {
-        let api_key = self.api_key.clone()
+        let api_key = self
+            .api_key
+            .clone()
             .or_else(|| std::env::var("SKILLSMERGE_API_KEY").ok())
             .or_else(|| std::env::var("OPENAI_API_KEY").ok())
             .unwrap_or_default();
@@ -131,10 +133,12 @@ pub fn load_config(path: &Path) -> Result<Config> {
             file: path.display().to_string(),
             reason: format!("Invalid JSON config: {}", e),
         }),
-        "yaml" | "yml" => serde_yaml::from_str(&content).map_err(|e| SkillsMergeError::ParseError {
-            file: path.display().to_string(),
-            reason: format!("Invalid YAML config: {}", e),
-        }),
+        "yaml" | "yml" => {
+            serde_yaml::from_str(&content).map_err(|e| SkillsMergeError::ParseError {
+                file: path.display().to_string(),
+                reason: format!("Invalid YAML config: {}", e),
+            })
+        }
         _ => toml::from_str(&content).map_err(|e| SkillsMergeError::ParseError {
             file: path.display().to_string(),
             reason: format!("Invalid TOML config: {}", e),
@@ -146,14 +150,18 @@ pub fn load_config(path: &Path) -> Result<Config> {
 pub fn save_config(config: &Config, path: &Path) -> Result<()> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("toml");
     let content = match ext {
-        "json" => serde_json::to_string_pretty(config).map_err(|e| SkillsMergeError::ParseError {
-            file: path.display().to_string(),
-            reason: format!("Failed to serialize config: {}", e),
-        })?,
-        "yaml" | "yml" => serde_yaml::to_string(config).map_err(|e| SkillsMergeError::ParseError {
-            file: path.display().to_string(),
-            reason: format!("Failed to serialize config: {}", e),
-        })?,
+        "json" => {
+            serde_json::to_string_pretty(config).map_err(|e| SkillsMergeError::ParseError {
+                file: path.display().to_string(),
+                reason: format!("Failed to serialize config: {}", e),
+            })?
+        }
+        "yaml" | "yml" => {
+            serde_yaml::to_string(config).map_err(|e| SkillsMergeError::ParseError {
+                file: path.display().to_string(),
+                reason: format!("Failed to serialize config: {}", e),
+            })?
+        }
         _ => toml::to_string_pretty(config).map_err(|e| SkillsMergeError::ParseError {
             file: path.display().to_string(),
             reason: format!("Failed to serialize config: {}", e),

@@ -132,15 +132,11 @@ impl App {
             KeyCode::Char('q') | KeyCode::Char('Q') => {
                 return true; // quit
             }
-            KeyCode::Up => {
-                if self.selected_menu_idx > 0 {
-                    self.selected_menu_idx -= 1;
-                }
+            KeyCode::Up if self.selected_menu_idx > 0 => {
+                self.selected_menu_idx -= 1;
             }
-            KeyCode::Down => {
-                if self.selected_menu_idx < MainMenuOption::ALL.len() - 1 {
-                    self.selected_menu_idx += 1;
-                }
+            KeyCode::Down if self.selected_menu_idx < MainMenuOption::ALL.len() - 1 => {
+                self.selected_menu_idx += 1;
             }
             KeyCode::Enter => {
                 let option = MainMenuOption::ALL[self.selected_menu_idx];
@@ -179,15 +175,11 @@ impl App {
             KeyCode::Esc | KeyCode::Char('q') => {
                 self.mode = AppMode::MainMenu;
             }
-            KeyCode::Up => {
-                if self.current_conflict_idx > 0 {
-                    self.current_conflict_idx -= 1;
-                }
+            KeyCode::Up if self.current_conflict_idx > 0 => {
+                self.current_conflict_idx -= 1;
             }
-            KeyCode::Down => {
-                if self.current_conflict_idx < self.conflicts.len().saturating_sub(1) {
-                    self.current_conflict_idx += 1;
-                }
+            KeyCode::Down if self.current_conflict_idx < self.conflicts.len().saturating_sub(1) => {
+                self.current_conflict_idx += 1;
             }
             KeyCode::Enter => {
                 self.mode = AppMode::ConflictResolution;

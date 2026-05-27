@@ -27,12 +27,11 @@ struct TomlInstruction {
 }
 
 pub fn parse(content: &str, path: &Path) -> Result<SkillIR> {
-    let toml_skill: TomlSkill = toml::from_str(content).map_err(|e| {
-        SkillsMergeError::ParseError {
+    let toml_skill: TomlSkill =
+        toml::from_str(content).map_err(|e| SkillsMergeError::ParseError {
             file: path.display().to_string(),
             reason: format!("Invalid TOML: {}", e),
-        }
-    })?;
+        })?;
 
     let mut instructions = Vec::new();
     for ti in &toml_skill.instructions {
@@ -91,7 +90,7 @@ fn toml_to_json(value: &toml::Value) -> Result<serde_json::Value> {
         toml::Value::Boolean(b) => Ok(serde_json::Value::Bool(*b)),
         toml::Value::Array(arr) => {
             let vals: Vec<serde_json::Value> =
-                arr.iter().map(|v| toml_to_json(v)).collect::<Result<Vec<_>>>()?;
+                arr.iter().map(toml_to_json).collect::<Result<Vec<_>>>()?;
             Ok(serde_json::Value::Array(vals))
         }
         toml::Value::Table(table) => {

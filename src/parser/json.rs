@@ -27,12 +27,11 @@ struct JsonInstruction {
 }
 
 pub fn parse(content: &str, path: &Path) -> Result<SkillIR> {
-    let json_skill: JsonSkill = serde_json::from_str(content).map_err(|e| {
-        SkillsMergeError::ParseError {
+    let json_skill: JsonSkill =
+        serde_json::from_str(content).map_err(|e| SkillsMergeError::ParseError {
             file: path.display().to_string(),
             reason: format!("Invalid JSON: {}", e),
-        }
-    })?;
+        })?;
 
     let mut instructions = Vec::new();
     for ji in &json_skill.instructions {

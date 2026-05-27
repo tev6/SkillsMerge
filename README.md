@@ -37,16 +37,12 @@ SkillsMerge 利用大语言模型（LLM）理解指令的**语义**，智能检�
 需要 Rust 1.75+ 工具链：
 
 ```bash
-git clone https://github.com/your-username/SkillsMerge.git
+git clone https://github.com/tev6/SkillsMerge.git
 cd SkillsMerge
 cargo build --release
 ```
 
 构建产物位于 `target/release/skillsmerge`（或 `.exe`）。
-
-### 直接下载
-
-前往 [Releases](https://github.com/your-username/SkillsMerge/releases) 下载对应平台版本。
 
 ## 快速开始
 

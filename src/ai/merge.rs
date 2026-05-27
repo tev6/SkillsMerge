@@ -69,16 +69,23 @@ pub async fn ai_merge(client: &LlmClient, skills: Vec<SkillIR>) -> Result<MergeR
 
     // Step 2: AI merges the skills
     println!("AI is merging skills...");
-    let skills_json = serde_json::to_string_pretty(&skills.iter().map(|s| serde_json::json!({
-        "name": s.name,
-        "description": s.description,
-        "instructions": s.instructions.iter().map(|i| serde_json::json!({
-            "command": i.command,
-            "content": i.content,
-            "category": i.category,
-            "priority": i.priority,
-        })).collect::<Vec<_>>(),
-    })).collect::<Vec<_>>())?;
+    let skills_json = serde_json::to_string_pretty(
+        &skills
+            .iter()
+            .map(|s| {
+                serde_json::json!({
+                    "name": s.name,
+                    "description": s.description,
+                    "instructions": s.instructions.iter().map(|i| serde_json::json!({
+                        "command": i.command,
+                        "content": i.content,
+                        "category": i.category,
+                        "priority": i.priority,
+                    })).collect::<Vec<_>>(),
+                })
+            })
+            .collect::<Vec<_>>(),
+    )?;
 
     let conflicts_json = serde_json::to_string_pretty(&conflicts.iter().map(|c| serde_json::json!({
         "type": c.conflict_type.to_string(),
@@ -88,57 +95,66 @@ pub async fn ai_merge(client: &LlmClient, skills: Vec<SkillIR>) -> Result<MergeR
         "instruction_b": format!("{}: {}", c.instruction_b.skill_name, c.instruction_b.content),
     })).collect::<Vec<_>>())?;
 
-    let response = client.ask(
-        prompts::merge_system(),
-        &prompts::merge_prompt(&skills_json, &conflicts_json),
-    ).await?;
+    let response = client
+        .ask(
+            prompts::merge_system(),
+            &prompts::merge_prompt(&skills_json, &conflicts_json),
+        )
+        .await?;
 
     let ai_result: AiMergeResult = parse_json_response(&response)?;
 
     // Step 3: Build merged SkillIR from AI result
     let mut merged_instructions = Vec::new();
     for ai_instr in &ai_result.merged_skill.instructions {
-        let instr = Instruction::new(
-            ai_instr.command.clone(),
-            ai_instr.content.clone(),
-        )
-        .with_priority(ai_instr.priority)
-        .with_category(ai_instr.category.clone());
+        let instr = Instruction::new(ai_instr.command.clone(), ai_instr.content.clone())
+            .with_priority(ai_instr.priority)
+            .with_category(ai_instr.category.clone());
         merged_instructions.push(instr);
     }
 
     let mut merged_skill = SkillIR::new(
         ai_result.merged_skill.name.clone(),
         std::path::PathBuf::from("merged"),
-        skills.first().map(|s| s.source.format).unwrap_or(InputFormat::Markdown),
+        skills
+            .first()
+            .map(|s| s.source.format)
+            .unwrap_or(InputFormat::Markdown),
     );
     merged_skill.description = Some(ai_result.merged_skill.description.clone());
     merged_skill.instructions = merged_instructions;
     merged_skill.metadata = merge_metadata(&skills);
 
     // Map AI resolutions to Conflict resolutions
-    let conflicts_resolved: Vec<Conflict> = conflicts.into_iter().map(|mut c| {
-        // Find matching AI resolution
-        let matching_resolution = ai_result.resolutions.iter().find(|r| {
-            c.description.contains(&r.conflict) || r.conflict.contains(&c.description)
-        });
+    let conflicts_resolved: Vec<Conflict> = conflicts
+        .into_iter()
+        .map(|mut c| {
+            // Find matching AI resolution
+            let matching_resolution = ai_result.resolutions.iter().find(|r| {
+                c.description.contains(&r.conflict) || r.conflict.contains(&c.description)
+            });
 
-        c.suggested_resolution = Some(Resolution {
-            strategy: "ai-merge".to_string(),
-            selected: matching_resolution
-                .map(|r| match r.resolution.to_lowercase().as_str() {
-                    "chosen" if r.chosen_instruction.contains(&c.instruction_a.content) => ResolutionChoice::UseA,
-                    "chosen" if r.chosen_instruction.contains(&c.instruction_b.content) => ResolutionChoice::UseB,
-                    "merged" => ResolutionChoice::Merge,
-                    _ => ResolutionChoice::Merge,
-                })
-                .unwrap_or(ResolutionChoice::Merge),
-            rationale: matching_resolution
-                .map(|r| r.rationale.clone())
-                .unwrap_or_else(|| "AI determined this resolution".to_string()),
-        });
-        c
-    }).collect();
+            c.suggested_resolution = Some(Resolution {
+                strategy: "ai-merge".to_string(),
+                selected: matching_resolution
+                    .map(|r| match r.resolution.to_lowercase().as_str() {
+                        "chosen" if r.chosen_instruction.contains(&c.instruction_a.content) => {
+                            ResolutionChoice::UseA
+                        }
+                        "chosen" if r.chosen_instruction.contains(&c.instruction_b.content) => {
+                            ResolutionChoice::UseB
+                        }
+                        "merged" => ResolutionChoice::Merge,
+                        _ => ResolutionChoice::Merge,
+                    })
+                    .unwrap_or(ResolutionChoice::Merge),
+                rationale: matching_resolution
+                    .map(|r| r.rationale.clone())
+                    .unwrap_or_else(|| "AI determined this resolution".to_string()),
+            });
+            c
+        })
+        .collect();
 
     let warnings = Vec::new();
 
@@ -162,16 +178,18 @@ pub async fn ask_about_conflict(
     client: &LlmClient,
     conflict: &Conflict,
 ) -> Result<ConflictQuestion> {
-    let response = client.ask(
-        prompts::conflict_question_system(),
-        &prompts::conflict_question_prompt(
-            &conflict.description,
-            &conflict.instruction_a.content,
-            &conflict.instruction_b.content,
-            &conflict.instruction_a.skill_name,
-            &conflict.instruction_b.skill_name,
-        ),
-    ).await?;
+    let response = client
+        .ask(
+            prompts::conflict_question_system(),
+            &prompts::conflict_question_prompt(
+                &conflict.description,
+                &conflict.instruction_a.content,
+                &conflict.instruction_b.content,
+                &conflict.instruction_a.skill_name,
+                &conflict.instruction_b.skill_name,
+            ),
+        )
+        .await?;
 
     parse_json_response(&response)
 }
@@ -197,10 +215,12 @@ pub async fn generate_ai_output(client: &LlmClient, result: &MergeResult) -> Res
         }).collect::<Vec<_>>(),
     }))?;
 
-    client.ask(
-        prompts::generate_output_system(),
-        &prompts::generate_output_prompt(&merged_json),
-    ).await
+    client
+        .ask(
+            prompts::generate_output_system(),
+            &prompts::generate_output_prompt(&merged_json),
+        )
+        .await
 }
 
 fn merge_metadata(skills: &[SkillIR]) -> SkillMetadata {

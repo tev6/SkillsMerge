@@ -30,7 +30,10 @@ pub fn collect_input_files(paths: &[PathBuf]) -> Vec<PathBuf> {
 /// Check if a file is a supported SKILLS file based on extension
 fn is_skills_file(path: &Path) -> bool {
     matches!(
-        path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()).as_deref(),
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .as_deref(),
         Some("md") | Some("json") | Some("yaml") | Some("yml") | Some("toml")
     )
 }

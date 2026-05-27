@@ -37,16 +37,12 @@ SkillsMerge leverages Large Language Models (LLMs) to understand the **semantics
 Requires Rust 1.75+ toolchain:
 
 ```bash
-git clone https://github.com/your-username/SkillsMerge.git
+git clone https://github.com/tev6/SkillsMerge.git
 cd SkillsMerge
 cargo build --release
 ```
 
 The binary is at `target/release/skillsmerge` (or `.exe` on Windows).
-
-### Download
-
-Visit [Releases](https://github.com/your-username/SkillsMerge/releases) to download for your platform.
 
 ## Quick Start
 

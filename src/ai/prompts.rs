@@ -131,7 +131,13 @@ Keep your explanations concise and actionable."#
 }
 
 /// Prompt for generating a user question about a conflict
-pub fn conflict_question_prompt(conflict_description: &str, instruction_a: &str, instruction_b: &str, skill_a: &str, skill_b: &str) -> String {
+pub fn conflict_question_prompt(
+    conflict_description: &str,
+    instruction_a: &str,
+    instruction_b: &str,
+    skill_a: &str,
+    skill_b: &str,
+) -> String {
     format!(
         r#"A conflict has been detected between two SKILLS that needs user input to resolve.
 

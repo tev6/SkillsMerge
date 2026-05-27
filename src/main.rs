@@ -46,19 +46,45 @@ async fn run(args: cli::Cli) -> Result<(), SkillsMergeError> {
             api_key,
             ai_output,
         }) => {
-            run_merge(&input, output.as_deref(), &strategy, &format, auto_resolve.as_deref(), ai_model.as_deref(), ai_base_url.as_deref(), api_key.as_deref(), ai_output).await
+            run_merge(
+                &input,
+                output.as_deref(),
+                &strategy,
+                &format,
+                auto_resolve.as_deref(),
+                ai_model.as_deref(),
+                ai_base_url.as_deref(),
+                api_key.as_deref(),
+                ai_output,
+            )
+            .await
         }
-        Some(Commands::Check { input, format, ai_model, ai_base_url, api_key }) => {
-            run_check(&input, &format, ai_model.as_deref(), ai_base_url.as_deref(), api_key.as_deref()).await
+        Some(Commands::Check {
+            input,
+            format,
+            ai_model,
+            ai_base_url,
+            api_key,
+        }) => {
+            run_check(
+                &input,
+                &format,
+                ai_model.as_deref(),
+                ai_base_url.as_deref(),
+                api_key.as_deref(),
+            )
+            .await
         }
         Some(Commands::Batch {
             config: config_path,
             input,
             output,
         }) => run_batch(&config_path, &input, output.as_deref()).await,
-        Some(Commands::Interactive { input, ai_model, api_key }) => {
-            run_interactive(&input, ai_model.as_deref(), api_key.as_deref())
-        }
+        Some(Commands::Interactive {
+            input,
+            ai_model,
+            api_key,
+        }) => run_interactive(&input, ai_model.as_deref(), api_key.as_deref()),
         None => {
             cli::Cli::try_parse_from(["skillsmerge", "--help"]).ok();
             Ok(())
@@ -66,7 +92,11 @@ async fn run(args: cli::Cli) -> Result<(), SkillsMergeError> {
     }
 }
 
-fn build_llm_config(ai_model: Option<&str>, ai_base_url: Option<&str>, api_key: Option<&str>) -> skillsmerge::config::AiConfig {
+fn build_llm_config(
+    ai_model: Option<&str>,
+    ai_base_url: Option<&str>,
+    api_key: Option<&str>,
+) -> skillsmerge::config::AiConfig {
     let mut ai_config = skillsmerge::config::AiConfig::default();
     if let Some(model) = ai_model {
         ai_config.model = model.to_string();
@@ -80,6 +110,7 @@ fn build_llm_config(ai_model: Option<&str>, ai_base_url: Option<&str>, api_key: 
     ai_config
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_merge(
     input: &[std::path::PathBuf],
     output: Option<&std::path::Path>,
@@ -111,7 +142,10 @@ async fn run_merge(
         // AI-driven merge
         let ai_config = build_llm_config(ai_model, ai_base_url, api_key);
         let llm_config = ai_config.to_llm_config();
-        println!("Using AI model: {} ({})", llm_config.model, llm_config.base_url);
+        println!(
+            "Using AI model: {} ({})",
+            llm_config.model, llm_config.base_url
+        );
         let client = LlmClient::new(llm_config);
 
         let result = skillsmerge::ai::merge::ai_merge(&client, skills).await?;
@@ -150,7 +184,9 @@ async fn run_merge(
     };
 
     // Output
-    let output_format = format_str.parse().unwrap_or(skillsmerge::ir::OutputFormat::Markdown);
+    let output_format = format_str
+        .parse()
+        .unwrap_or(skillsmerge::ir::OutputFormat::Markdown);
     let content = output::generate(&result, output_format);
 
     match output {
@@ -220,7 +256,9 @@ async fn run_check(
     println!("Found {} conflict(s):\n", conflicts.len());
 
     let report = reporter::generate_conflict_report(&conflicts);
-    let output_format = format_str.parse().unwrap_or(skillsmerge::ir::OutputFormat::Markdown);
+    let output_format = format_str
+        .parse()
+        .unwrap_or(skillsmerge::ir::OutputFormat::Markdown);
 
     match output_format {
         skillsmerge::ir::OutputFormat::Markdown => println!("{}", report),
@@ -255,7 +293,8 @@ async fn run_batch(
         Some(&cfg.ai.base_url),
         cfg.ai.api_key.as_deref(),
         true,
-    ).await
+    )
+    .await
 }
 
 fn run_interactive(
@@ -271,10 +310,16 @@ fn run_interactive(
     }
 
     let ai_config = build_llm_config(ai_model, None, api_key);
-    if ai_config.api_key.is_some() || std::env::var("SKILLSMERGE_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok() {
+    if ai_config.api_key.is_some()
+        || std::env::var("SKILLSMERGE_API_KEY").is_ok()
+        || std::env::var("OPENAI_API_KEY").is_ok()
+    {
         println!("AI assistance enabled (model: {})", ai_config.model);
     }
 
-    println!("Starting interactive mode with {} skill(s)...", skills.len());
+    println!(
+        "Starting interactive mode with {} skill(s)...",
+        skills.len()
+    );
     skillsmerge::tui::run(skills)
 }

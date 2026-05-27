@@ -1,9 +1,9 @@
 use ratatui::{
-    Frame,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    Frame,
 };
 
 use super::app::{App, AppMode, MainMenuOption};
@@ -33,7 +33,11 @@ fn draw_main_menu(f: &mut Frame, app: &App) {
 
     // Title
     let title = Paragraph::new("SkillsMerge v1.0.0 - Interactive Merge")
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(title, chunks[0]);
 
@@ -43,7 +47,9 @@ fn draw_main_menu(f: &mut Frame, app: &App) {
         .enumerate()
         .map(|(i, opt)| {
             let style = if i == app.selected_menu_idx {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
@@ -60,10 +66,16 @@ fn draw_main_menu(f: &mut Frame, app: &App) {
     // Status bar
     let status = Paragraph::new(Line::from(vec![
         Span::styled("Skills: ", Style::default().fg(Color::Gray)),
-        Span::styled(app.skills.len().to_string(), Style::default().fg(Color::White)),
+        Span::styled(
+            app.skills.len().to_string(),
+            Style::default().fg(Color::White),
+        ),
         Span::raw("  "),
         Span::styled("Conflicts: ", Style::default().fg(Color::Gray)),
-        Span::styled(app.conflicts.len().to_string(), Style::default().fg(Color::White)),
+        Span::styled(
+            app.conflicts.len().to_string(),
+            Style::default().fg(Color::White),
+        ),
     ]))
     .block(Block::default().borders(Borders::ALL));
     f.render_widget(status, chunks[2]);
@@ -104,7 +116,11 @@ fn draw_conflicts(f: &mut Frame, app: &App) {
         })
         .collect();
 
-    let list = List::new(items).block(Block::default().borders(Borders::ALL).title("Conflict List"));
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Conflict List"),
+    );
     f.render_widget(list, chunks[1]);
 
     // Help bar
@@ -129,7 +145,13 @@ fn draw_conflict_resolution(f: &mut Frame, app: &App) {
     // Title
     let conflict = app.conflicts.get(app.current_conflict_idx);
     let title_text = conflict
-        .map(|c| format!("Conflict #{}: {}", app.current_conflict_idx + 1, c.conflict_type))
+        .map(|c| {
+            format!(
+                "Conflict #{}: {}",
+                app.current_conflict_idx + 1,
+                c.conflict_type
+            )
+        })
         .unwrap_or_else(|| "No conflicts".to_string());
 
     let title = Paragraph::new(title_text)
@@ -166,9 +188,11 @@ fn draw_conflict_resolution(f: &mut Frame, app: &App) {
     f.render_widget(para_b, chunks[2]);
 
     // Options
-    let options = Paragraph::new("[A] Use Source A    [B] Use Source B    [M] Merge    [S] Skip    [Esc] Back")
-        .style(Style::default().fg(Color::Cyan))
-        .block(Block::default().borders(Borders::ALL));
+    let options = Paragraph::new(
+        "[A] Use Source A    [B] Use Source B    [M] Merge    [S] Skip    [Esc] Back",
+    )
+    .style(Style::default().fg(Color::Cyan))
+    .block(Block::default().borders(Borders::ALL));
     f.render_widget(options, chunks[3]);
 }
 
@@ -227,7 +251,11 @@ fn draw_load_skills(f: &mut Frame, app: &App) {
 }
 
 fn draw_merge_result(f: &mut Frame, app: &App) {
-    let resolved = app.conflicts.iter().filter(|c| c.suggested_resolution.is_some()).count();
+    let resolved = app
+        .conflicts
+        .iter()
+        .filter(|c| c.suggested_resolution.is_some())
+        .count();
     let text = format!(
         "Merge Result\n\nConflicts resolved: {}/{}\n\nAll conflicts have been resolved.\nYou can now save the merged output via CLI.\n\nPress Esc to return to main menu.",
         resolved,

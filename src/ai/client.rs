@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::error::{Result, SkillsMergeError};
+use serde::{Deserialize, Serialize};
 
 /// LLM API configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,15 +51,24 @@ pub struct ChatMessage {
 
 impl ChatMessage {
     pub fn system(content: impl Into<String>) -> Self {
-        Self { role: "system".to_string(), content: content.into() }
+        Self {
+            role: "system".to_string(),
+            content: content.into(),
+        }
     }
 
     pub fn user(content: impl Into<String>) -> Self {
-        Self { role: "user".to_string(), content: content.into() }
+        Self {
+            role: "user".to_string(),
+            content: content.into(),
+        }
     }
 
     pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: "assistant".to_string(), content: content.into() }
+        Self {
+            role: "assistant".to_string(),
+            content: content.into(),
+        }
     }
 }
 
@@ -95,7 +104,10 @@ impl LlmClient {
             });
         }
 
-        let url = format!("{}/chat/completions", self.config.base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/chat/completions",
+            self.config.base_url.trim_end_matches('/')
+        );
 
         let request = ChatRequest {
             model: self.config.model.clone(),
@@ -104,7 +116,8 @@ impl LlmClient {
             max_tokens: self.config.max_tokens,
         };
 
-        let response = self.http
+        let response = self
+            .http
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .header("Content-Type", "application/json")
@@ -125,12 +138,14 @@ impl LlmClient {
             });
         }
 
-        let chat_response: ChatResponse = response.json().await.map_err(|e| {
-            SkillsMergeError::ParseError {
-                file: "AI response".to_string(),
-                reason: format!("Failed to parse response: {}", e),
-            }
-        })?;
+        let chat_response: ChatResponse =
+            response
+                .json()
+                .await
+                .map_err(|e| SkillsMergeError::ParseError {
+                    file: "AI response".to_string(),
+                    reason: format!("Failed to parse response: {}", e),
+                })?;
 
         chat_response
             .choices
