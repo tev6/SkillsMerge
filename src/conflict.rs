@@ -1,9 +1,47 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ir::{
     Conflict, ConflictSource, ConflictType, Instruction, InstructionRef, Resolution,
     ResolutionChoice, Severity, SkillIR,
 };
+
+/// Minimum Jaccard similarity to flag two instructions as semantically related
+const SEMANTIC_SIMILARITY_THRESHOLD: f64 = 0.30;
+/// Minimum word count for an instruction to be considered in semantic analysis
+const MIN_WORD_COUNT: usize = 3;
+/// Domain keywords — if both instructions mention any of these the likelihood of
+/// a real semantic conflict is higher.
+const DOMAIN_KEYWORDS: &[&str] = &[
+    "indent",
+    "spaces",
+    "tabs",
+    "formatting",
+    "lint",
+    "style",
+    "naming",
+    "comment",
+    "doc",
+    "error",
+    "handle",
+    "log",
+    "test",
+    "commit",
+    "review",
+    "deploy",
+    "build",
+    "deps",
+    "import",
+    "export",
+    "async",
+    "sync",
+    "api",
+    "security",
+    "auth",
+    "token",
+    "secret",
+    "config",
+    "env",
+];
 
 /// Detect conflicts among a list of skills
 pub fn detect_conflicts(skills: &[SkillIR]) -> Vec<Conflict> {
@@ -75,11 +113,16 @@ pub fn detect_conflicts(skills: &[SkillIR]) -> Vec<Conflict> {
         }
     }
 
-    // Step 4: Check for circular dependencies (if skills reference each other)
+    // Step 4: Detect semantic overlaps — instructions with different commands
+    // but similar content that likely address the same concern.
+    let semantic = detect_semantic_overlaps(skills, &command_index);
+    conflicts.extend(semantic);
+
+    // Step 5: Check for circular dependencies (if skills reference each other)
     let circular = detect_circular_dependencies(skills);
     conflicts.extend(circular);
 
-    // Step 5: Sort by severity (descending)
+    // Step 6: Sort by severity (descending)
     conflicts.sort_by_key(|b| std::cmp::Reverse(b.severity));
     conflicts
 }
@@ -277,4 +320,130 @@ fn dfs_cycle(
 
     path.pop();
     in_stack[node] = false;
+}
+
+// ---------------------------------------------------------------------------
+// Semantic overlap detection
+// ---------------------------------------------------------------------------
+
+/// Detect instructions from different skills that have *different* command names
+/// but semantically similar content (e.g. "Always use spaces" vs "Use tabs for
+/// indentation").  These are soft conflicts that the exact-command matcher
+/// misses because the command keywords differ.
+fn detect_semantic_overlaps(
+    skills: &[SkillIR],
+    command_index: &HashMap<String, Vec<(usize, usize)>>,
+) -> Vec<Conflict> {
+    let mut conflicts = Vec::new();
+
+    // Build a quick set of (skill_idx, instr_idx) pairs already covered by
+    // exact-command conflicts so we don't double-report.
+    let mut covered: HashSet<(usize, usize, usize, usize)> = HashSet::new();
+    for entries in command_index.values() {
+        if entries.len() < 2 {
+            continue;
+        }
+        for i in 0..entries.len() {
+            for j in (i + 1)..entries.len() {
+                let a = entries[i];
+                let b = entries[j];
+                covered.insert((a.0, a.1, b.0, b.1));
+                covered.insert((b.0, b.1, a.0, a.1));
+            }
+        }
+    }
+
+    // Cross-compare all instruction pairs across different skills
+    for si_a in 0..skills.len() {
+        for si_b in (si_a + 1)..skills.len() {
+            for (ii_a, instr_a) in skills[si_a].instructions.iter().enumerate() {
+                for (ii_b, instr_b) in skills[si_b].instructions.iter().enumerate() {
+                    // Already caught by exact-command matching?
+                    if covered.contains(&(si_a, ii_a, si_b, ii_b)) {
+                        continue;
+                    }
+
+                    let tokens_a = tokenize(&instr_a.content);
+                    let tokens_b = tokenize(&instr_b.content);
+
+                    // Skip very short instructions — not enough signal
+                    if tokens_a.len() < MIN_WORD_COUNT || tokens_b.len() < MIN_WORD_COUNT {
+                        continue;
+                    }
+
+                    let sim = jaccard(&tokens_a, &tokens_b);
+                    if sim >= SEMANTIC_SIMILARITY_THRESHOLD && share_domain(&tokens_a, &tokens_b) {
+                        let severity = if sim > 0.6 {
+                            Severity::High
+                        } else if sim > 0.45 {
+                            Severity::Medium
+                        } else {
+                            Severity::Low
+                        };
+
+                        let conflict = Conflict::new(
+                            ConflictType::SemanticConflict,
+                            severity,
+                            make_instruction_ref(&skills[si_a], instr_a),
+                            make_instruction_ref(&skills[si_b], instr_b),
+                            format!(
+                                "Semantically similar instructions (similarity: {:.0}%) from \
+                                 '{}' and '{}': \"{}\" vs \"{}\"",
+                                sim * 100.0,
+                                skills[si_a].name,
+                                skills[si_b].name,
+                                truncate_str(&instr_a.content, 70),
+                                truncate_str(&instr_b.content, 70),
+                            ),
+                        );
+                        conflicts.push(conflict);
+                    }
+                }
+            }
+        }
+    }
+
+    conflicts
+}
+
+/// Tokenize a string into a set of meaningful lowercase words.
+fn tokenize(text: &str) -> HashSet<String> {
+    text.to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .map(|w| w.trim())
+        .filter(|w| w.len() >= 3)
+        .map(|w| w.to_string())
+        .collect()
+}
+
+/// Jaccard similarity coefficient between two sets.
+fn jaccard(a: &HashSet<String>, b: &HashSet<String>) -> f64 {
+    if a.is_empty() || b.is_empty() {
+        return 0.0;
+    }
+    let intersection = a.intersection(b).count();
+    let union = a.union(b).count();
+    intersection as f64 / union as f64
+}
+
+/// Check whether two token sets share at least one domain keyword,
+/// which increases confidence that the similarity is meaningful.
+fn share_domain(tokens_a: &HashSet<String>, tokens_b: &HashSet<String>) -> bool {
+    for kw in DOMAIN_KEYWORDS {
+        let kw = *kw;
+        if tokens_a.contains(kw) && tokens_b.contains(kw) {
+            return true;
+        }
+    }
+    // Fallback: if there's a substantial intersection anyway, it's likely real
+    let common = tokens_a.intersection(tokens_b).count();
+    common >= 2
+}
+
+fn truncate_str(s: &str, max_len: usize) -> String {
+    if s.len() <= max_len {
+        s.to_string()
+    } else {
+        format!("{}…", &s[..max_len])
+    }
 }

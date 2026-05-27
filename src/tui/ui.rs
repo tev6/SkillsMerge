@@ -7,6 +7,7 @@ use ratatui::{
 };
 
 use super::app::{App, AppMode, MainMenuOption};
+use crate::ir::MergeStrategy;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     match app.mode {
@@ -229,40 +230,208 @@ fn draw_help(f: &mut Frame, _app: &App) {
 }
 
 fn draw_settings(f: &mut Frame, app: &App) {
-    let text = format!(
-        "Settings\n\nMerge Strategy: {:?}\n\nPress Esc to return",
-        app.merge_strategy
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(2)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(6),
+            Constraint::Length(3),
+        ])
+        .split(f.area());
+
+    let title = Paragraph::new("Settings")
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(title, chunks[0]);
+
+    let strategies = [
+        "Preserve All  — keep every instruction, flag all conflicts",
+        "Auto Select   — auto-resolve via priority comparison",
+        "Interactive   — prompt user for each conflict",
+        "Semantic Merge — use heuristics to merge related instructions",
+    ];
+    let selected_idx = match app.merge_strategy {
+        MergeStrategy::PreserveAll => 0usize,
+        MergeStrategy::AutoSelect => 1,
+        MergeStrategy::Interactive => 2,
+        MergeStrategy::SemanticMerge => 3,
+        MergeStrategy::Custom(_) => 0,
+    };
+    let items: Vec<ListItem> = strategies
+        .iter()
+        .enumerate()
+        .map(|(i, desc)| {
+            let prefix = if i == selected_idx { "▶ " } else { "  " };
+            let style = if i == selected_idx {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::Gray)
+            };
+            ListItem::new(Line::from(Span::styled(
+                format!("{}{}", prefix, desc),
+                style,
+            )))
+        })
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Merge Strategy (← → to change)"),
     );
-    let paragraph = Paragraph::new(text)
-        .block(Block::default().borders(Borders::ALL).title("Settings"))
-        .wrap(Wrap { trim: true });
-    f.render_widget(paragraph, f.area());
+    f.render_widget(list, chunks[1]);
+
+    let help = if !app.status_message.is_empty() {
+        app.status_message.clone()
+    } else {
+        "← → : switch strategy    Esc : back to menu".to_string()
+    };
+    let help_p = Paragraph::new(help)
+        .style(Style::default().fg(Color::Gray))
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(help_p, chunks[2]);
 }
 
 fn draw_load_skills(f: &mut Frame, app: &App) {
-    let text = format!(
-        "Load Skills\n\nCurrently loaded: {} skill(s)\n\nFile loading is available via CLI.\nPress Esc to return.",
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(2)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(5),
+            Constraint::Length(3),
+        ])
+        .split(f.area());
+
+    let title = Paragraph::new(format!(
+        "Load Skills — {} skill(s) currently loaded",
         app.skills.len()
-    );
-    let paragraph = Paragraph::new(text)
-        .block(Block::default().borders(Borders::ALL).title("Load Skills"))
-        .wrap(Wrap { trim: true });
-    f.render_widget(paragraph, f.area());
+    ))
+    .style(
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    )
+    .block(Block::default().borders(Borders::ALL));
+    f.render_widget(title, chunks[0]);
+
+    // Show the input prompt and current buffer
+    let prompt = if app.input_buffer.is_empty() {
+        "Type a file or directory path and press Enter to load.\n\
+         Example: tests/fixtures/skills\n\
+         Example: skill-a.md"
+            .to_string()
+    } else {
+        format!("> {}", app.input_buffer)
+    };
+    let input = Paragraph::new(prompt)
+        .block(Block::default().borders(Borders::ALL).title("File Path"))
+        .style(Style::default().fg(Color::Yellow));
+    f.render_widget(input, chunks[1]);
+
+    // Status / loaded skill list
+    let status_text = if !app.status_message.is_empty() {
+        app.status_message.clone()
+    } else {
+        let names: Vec<String> = app.skills.iter().map(|s| s.name.clone()).collect();
+        if names.is_empty() {
+            "No skills loaded yet.".to_string()
+        } else {
+            format!("Loaded: {}", names.join(", "))
+        }
+    };
+    let status = Paragraph::new(status_text)
+        .style(Style::default().fg(Color::Gray))
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(status, chunks[2]);
 }
 
 fn draw_merge_result(f: &mut Frame, app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(2)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(8),
+            Constraint::Length(3),
+        ])
+        .split(f.area());
+
+    let title = Paragraph::new("Merge Result")
+        .style(
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(title, chunks[0]);
+
     let resolved = app
         .conflicts
         .iter()
         .filter(|c| c.suggested_resolution.is_some())
         .count();
-    let text = format!(
-        "Merge Result\n\nConflicts resolved: {}/{}\n\nAll conflicts have been resolved.\nYou can now save the merged output via CLI.\n\nPress Esc to return to main menu.",
-        resolved,
-        app.conflicts.len()
-    );
-    let paragraph = Paragraph::new(text)
-        .block(Block::default().borders(Borders::ALL).title("Merge Result"))
+    let total = app.conflicts.len();
+
+    let body = if app.save_mode {
+        let prompt = if app.input_buffer.is_empty() {
+            "Enter filename to save the merged output:".to_string()
+        } else {
+            format!("> {}", app.input_buffer)
+        };
+        format!(
+            "Conflicts resolved: {}/{}\n\
+             Skills: {}\n\n\
+             Saving merged output...\n\n\
+             {}",
+            resolved,
+            total,
+            app.skills.len(),
+            prompt,
+        )
+    } else {
+        format!(
+            "Conflicts resolved: {}/{}\n\
+             Skills: {}\n\
+             Instructions: {} (after merge)\n\n\
+             All conflicts have been resolved.\n\n\
+             [S] Save to file    [Esc] Back to menu",
+            resolved,
+            total,
+            app.skills.len(),
+            app.skills
+                .iter()
+                .map(|s| s.instructions.len())
+                .sum::<usize>(),
+        )
+    };
+
+    let paragraph = Paragraph::new(body)
+        .block(Block::default().borders(Borders::ALL).title("Summary"))
+        .style(if app.save_mode {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default()
+        })
         .wrap(Wrap { trim: true });
-    f.render_widget(paragraph, f.area());
+    f.render_widget(paragraph, chunks[1]);
+
+    let help = if !app.status_message.is_empty() {
+        app.status_message.clone()
+    } else if app.save_mode {
+        "Type filename and press Enter, or Esc to cancel".to_string()
+    } else {
+        "[S] Save to file    [Esc] Back to menu".to_string()
+    };
+    let help_p = Paragraph::new(help)
+        .style(Style::default().fg(Color::Gray))
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(help_p, chunks[2]);
 }

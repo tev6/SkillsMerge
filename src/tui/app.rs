@@ -63,6 +63,8 @@ pub struct App {
     pub selected_menu_idx: usize,
     pub merge_strategy: MergeStrategy,
     pub status_message: String,
+    pub input_buffer: String,
+    pub save_mode: bool,
 }
 
 impl App {
@@ -76,6 +78,8 @@ impl App {
             selected_menu_idx: 0,
             merge_strategy: MergeStrategy::AutoSelect,
             status_message: String::new(),
+            input_buffer: String::new(),
+            save_mode: false,
         }
     }
 
@@ -253,24 +257,110 @@ impl App {
 
     fn handle_settings_key(&mut self, key: crossterm::event::KeyEvent) -> bool {
         use crossterm::event::KeyCode;
-        if key.code == KeyCode::Esc || key.code == KeyCode::Char('q') {
-            self.mode = AppMode::MainMenu;
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => {
+                self.mode = AppMode::MainMenu;
+            }
+            KeyCode::Left => {
+                self.merge_strategy = prev_strategy(&self.merge_strategy);
+                self.status_message = format!("Strategy: {}", strategy_label(&self.merge_strategy));
+            }
+            KeyCode::Right => {
+                self.merge_strategy = next_strategy(&self.merge_strategy);
+                self.status_message = format!("Strategy: {}", strategy_label(&self.merge_strategy));
+            }
+            _ => {}
         }
         false
     }
 
     fn handle_load_key(&mut self, key: crossterm::event::KeyEvent) -> bool {
         use crossterm::event::KeyCode;
-        if key.code == KeyCode::Esc || key.code == KeyCode::Char('q') {
-            self.mode = AppMode::MainMenu;
+        match key.code {
+            KeyCode::Esc => {
+                self.mode = AppMode::MainMenu;
+                self.input_buffer.clear();
+                self.status_message.clear();
+            }
+            KeyCode::Char(c) => {
+                self.input_buffer.push(c);
+                self.status_message = format!("Path: {}", self.input_buffer);
+            }
+            KeyCode::Backspace => {
+                self.input_buffer.pop();
+                if self.input_buffer.is_empty() {
+                    self.status_message = "Enter file path or press Esc to cancel".to_string();
+                } else {
+                    self.status_message = format!("Path: {}", self.input_buffer);
+                }
+            }
+            KeyCode::Enter if !self.input_buffer.is_empty() => {
+                let path = std::path::PathBuf::from(&self.input_buffer);
+                let (new_skills, errors) = crate::io::load_skills(&[path]);
+                if errors.is_empty() && !new_skills.is_empty() {
+                    self.skills.extend(new_skills);
+                    self.status_message = format!(
+                        "Loaded {} total skill(s). Press Esc to return.",
+                        self.skills.len()
+                    );
+                } else if !errors.is_empty() {
+                    self.status_message = format!("Error: {}", errors.into_iter().next().unwrap());
+                } else {
+                    self.status_message = "No valid skill files found.".to_string();
+                }
+                self.input_buffer.clear();
+            }
+            _ => {}
         }
         false
     }
 
     fn handle_merge_result_key(&mut self, key: crossterm::event::KeyEvent) -> bool {
         use crossterm::event::KeyCode;
+
+        // If in save mode, handle file-name input
+        if self.save_mode {
+            match key.code {
+                KeyCode::Esc => {
+                    self.save_mode = false;
+                    self.input_buffer.clear();
+                    self.status_message = "Save cancelled.".to_string();
+                }
+                KeyCode::Char(c) => {
+                    self.input_buffer.push(c);
+                    self.status_message = format!("Save as: {}", self.input_buffer);
+                }
+                KeyCode::Backspace => {
+                    self.input_buffer.pop();
+                    if self.input_buffer.is_empty() {
+                        self.status_message = "Enter filename (Esc to cancel):".to_string();
+                    } else {
+                        self.status_message = format!("Save as: {}", self.input_buffer);
+                    }
+                }
+                KeyCode::Enter => {
+                    if !self.input_buffer.is_empty() {
+                        self.status_message = format!(
+                            "Merged output would be written to: {} (use CLI to save)",
+                            self.input_buffer
+                        );
+                    }
+                    self.input_buffer.clear();
+                    self.save_mode = false;
+                }
+                _ => {}
+            }
+            return false;
+        }
+
         if key.code == KeyCode::Esc || key.code == KeyCode::Char('q') {
             self.mode = AppMode::MainMenu;
+        }
+
+        if key.code == KeyCode::Char('s') || key.code == KeyCode::Char('S') {
+            self.save_mode = true;
+            self.input_buffer.clear();
+            self.status_message = "Enter filename (Esc to cancel):".to_string();
         }
         false
     }
@@ -278,5 +368,39 @@ impl App {
     /// Consume the app and return skills + conflicts for merge
     pub fn into_parts(self) -> (Vec<SkillIR>, Vec<Conflict>) {
         (self.skills, self.conflicts)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Strategy helpers for Settings screen
+// ---------------------------------------------------------------------------
+
+fn next_strategy(s: &MergeStrategy) -> MergeStrategy {
+    match s {
+        MergeStrategy::PreserveAll => MergeStrategy::AutoSelect,
+        MergeStrategy::AutoSelect => MergeStrategy::Interactive,
+        MergeStrategy::Interactive => MergeStrategy::SemanticMerge,
+        MergeStrategy::SemanticMerge => MergeStrategy::PreserveAll,
+        MergeStrategy::Custom(_) => MergeStrategy::PreserveAll,
+    }
+}
+
+fn prev_strategy(s: &MergeStrategy) -> MergeStrategy {
+    match s {
+        MergeStrategy::PreserveAll => MergeStrategy::SemanticMerge,
+        MergeStrategy::AutoSelect => MergeStrategy::PreserveAll,
+        MergeStrategy::Interactive => MergeStrategy::AutoSelect,
+        MergeStrategy::SemanticMerge => MergeStrategy::Interactive,
+        MergeStrategy::Custom(_) => MergeStrategy::PreserveAll,
+    }
+}
+
+fn strategy_label(s: &MergeStrategy) -> &str {
+    match s {
+        MergeStrategy::PreserveAll => "Preserve All",
+        MergeStrategy::AutoSelect => "Auto Select",
+        MergeStrategy::Interactive => "Interactive",
+        MergeStrategy::SemanticMerge => "Semantic Merge",
+        MergeStrategy::Custom(_) => "Custom",
     }
 }
